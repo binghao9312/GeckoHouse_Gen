@@ -59,6 +59,8 @@ class ContourDesign:
     height: float
     wall_thickness: float = 4.0
     roof_thickness: float = 5.0
+    # Zero preserves the natural open-bottom shelter; a positive value closes it.
+    base_thickness: float = 0.0
     summit: list[float] = field(default_factory=lambda: [4.0, 2.0])
     levels: list[ContourLevel] = field(default_factory=list)
     entrance_width: float = 55.0
@@ -196,6 +198,7 @@ class ContourDesign:
             "height": self.height,
             "wall_thickness": self.wall_thickness,
             "roof_thickness": self.roof_thickness,
+            "base_thickness": self.base_thickness,
             "summit": self.summit.copy(),
             "levels": [
                 {
@@ -242,11 +245,14 @@ class ContourDesign:
             "height", "wall_thickness", "roof_thickness", "summit", "levels", "ring_clearance", "max_local_slope_deg",
             "max_overhang_xy", "max_overhang_ratio", "min_level_spacing",
         }
-        if set(payload) != expected:
-            raise ValueError(_key_error(payload, expected, "contour"))
+        allowed = expected | {"base_thickness"}
+        if set(payload) - allowed or expected - set(payload):
+            raise ValueError(_key_error(payload, allowed, "contour"))
+        base_thickness = float(payload.pop("base_thickness", 0.0))
         levels = _decode_levels(payload.pop("levels"), version=3)
         design = cls(
             **payload,
+            base_thickness=base_thickness,
             levels=levels,
             entrance_width=float(entrance["width"]),
             entrance_height=float(entrance["height"]),
@@ -358,6 +364,7 @@ def scale_design(design: ContourDesign, factor: float) -> ContourDesign:
         height=design.height * factor,
         wall_thickness=design.wall_thickness * factor,
         roof_thickness=design.roof_thickness * factor,
+        base_thickness=design.base_thickness * factor,
         summit=[value * factor for value in design.summit],
         levels=[replace(level, z=level.z * factor, points=[[value * factor for value in point] for point in level.points]) for level in design.levels],
         entrance_width=design.entrance_width * factor,

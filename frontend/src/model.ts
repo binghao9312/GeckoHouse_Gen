@@ -2,7 +2,7 @@ export type Role = 'wall' | 'roof_shoulder' | 'roof_top';
 export type SurfaceMode = 'smooth' | 'ledge';
 export interface ContourLevel { z: number; points: number[][]; surface_mode: SurfaceMode; manually_modified: boolean; role: Role; z_locked: boolean; shape_locked: boolean; }
 export interface Appearance { relief_enabled: boolean; relief_seed: number; relief_depth: number; relief_gap: number; relief_scale: number; }
-export interface Design { version: 3; height: number; wall_thickness: number; roof_thickness: number; summit: number[]; levels: ContourLevel[]; entrance: { width: number; height: number; offset: number; profile: number[][] }; ring_clearance: number; max_local_slope_deg: number; max_overhang_xy: number; max_overhang_ratio: number; min_level_spacing: number; appearance: Appearance; }
+export interface Design { version: 3; height: number; wall_thickness: number; roof_thickness: number; base_thickness: number; summit: number[]; levels: ContourLevel[]; entrance: { width: number; height: number; offset: number; profile: number[][] }; ring_clearance: number; max_local_slope_deg: number; max_overhang_xy: number; max_overhang_ratio: number; min_level_spacing: number; appearance: Appearance; }
 
 export const clone = (design: Design): Design => structuredClone(design);
 export const bounds = (points: number[][], axis: number): [number, number] => {

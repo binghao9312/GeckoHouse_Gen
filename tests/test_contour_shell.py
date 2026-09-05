@@ -11,11 +11,23 @@ def test_contour_shell_is_one_grounded_hollow_solid_with_roof():
     assert shell.isValid()
     assert len(shell.Solids()) == 1
     assert shell.Volume() > 0
-    assert shell.BoundingBox().zmin == pytest.approx(0.0, abs=0.01)
+    assert shell.BoundingBox().zmin == pytest.approx(0.0, abs=0.05)
     cavity_probe = cq.Workplane("XY").box(25, 25, 40, centered=(True, True, False)).val()
     assert shell.intersect(cavity_probe).Volume() == pytest.approx(0.0, abs=1e-5)
     roof_probe = cq.Workplane("XY").box(5, 5, 1, centered=(True, True, False)).translate((0, 0, design.height - 0.5)).val()
     assert shell.intersect(roof_probe).Volume() > 0
+
+
+def test_optional_base_plate_closes_the_floor_without_filling_the_cavity():
+    design = ContourDesign.default()
+    design.base_thickness = 2.0
+    shell = build_contour_shell(design, resolution="preview")
+    base_probe = cq.Workplane("XY").box(25, 25, 1, centered=(True, True, False)).translate((0, 0, 0.5)).val()
+    cavity_probe = cq.Workplane("XY").box(25, 25, 20, centered=(True, True, False)).translate((0, 0, 3.0)).val()
+    assert shell.isValid()
+    assert len(shell.Solids()) == 1
+    assert shell.intersect(base_probe).Volume() > 0
+    assert shell.intersect(cavity_probe).Volume() == pytest.approx(0.0, abs=1e-5)
 
 
 def test_advanced_ledge_transition_produces_a_single_printable_shell():

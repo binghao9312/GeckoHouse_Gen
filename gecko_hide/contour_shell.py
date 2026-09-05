@@ -130,7 +130,7 @@ def build_outer_from_contours(design: "ContourDesign", resolution: str = "final"
 def _ring_at_height(rings: Sequence[np.ndarray], heights: Sequence[float], modes: Sequence[str], z: float) -> np.ndarray:
     for index, (lower, upper) in enumerate(zip(heights, heights[1:], strict=False)):
         if lower <= z <= upper:
-            if modes[index + 1] == "step":
+            if modes[index + 1] == "ledge":
                 return rings[index]
             amount = (z - lower) / (upper - lower)
             return rings[index] * (1.0 - amount) + rings[index + 1] * amount
@@ -147,17 +147,21 @@ def _inward_ring(outer: np.ndarray, wall: float, *, count: int) -> np.ndarray:
 
 
 def build_inner_from_contours(design: "ContourDesign", resolution: str = "final") -> cq.Shape:
-    """Loft Shapely inward offsets from below the base to below the solid roof."""
+    """Loft the cavity from its open bottom or optional solid base to the roof."""
     if resolution not in SAMPLES_BY_RESOLUTION:
         raise ValueError(f"unknown contour resolution: {resolution}")
     design.validate()
     count = SAMPLES_BY_RESOLUTION[resolution]
     outer_rings, outer_heights, outer_modes = _sampled_levels(design, count=count)
     cavity_top = design.height - design.roof_thickness
-    selected_rings = [outer_rings[0]]
-    selected_heights = [-0.5]
+    if design.base_thickness == 0:
+        selected_rings = [outer_rings[0]]
+        selected_heights = [-0.5]
+    else:
+        selected_rings = [_ring_at_height(outer_rings, outer_heights, outer_modes, design.base_thickness)]
+        selected_heights = [design.base_thickness]
     for ring, z in zip(outer_rings, outer_heights, strict=True):
-        if 0.0 <= z < cavity_top:
+        if design.base_thickness < z < cavity_top:
             selected_rings.append(ring)
             selected_heights.append(z)
     # The cavity remains smooth through an exterior ledge so it cannot create

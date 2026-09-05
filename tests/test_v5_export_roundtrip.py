@@ -8,8 +8,8 @@ from gecko_hide.generator import generate_contour_gecko_hide
 from gecko_hide.validation import validate_step, validate_stl
 
 
-def test_v5_stl_and_step_round_trip_as_valid_single_solid(tmp_path):
-    design = ContourDesign.default()
+def _export_v5_design(design: ContourDesign, tmp_path, stem: str):
+    """Export one V5 configuration and independently validate both artifact formats."""
     footprint = sample_contour(design.footprint.points, count=192)
     config = GeckoHideConfig(
         width=float(np.ptp(footprint[:, 0])),
@@ -22,9 +22,20 @@ def test_v5_stl_and_step_round_trip_as_valid_single_solid(tmp_path):
         entrance_offset_x=design.entrance_offset,
     )
     shape = generate_contour_gecko_hide(design, resolution="preview")
-    stl_path, step_path = export_model(shape, config, tmp_path, stem="v5_round_trip")
+    stl_path, step_path = export_model(shape, config, tmp_path, stem=stem)
     stl = validate_stl(stl_path, config)
     validate_step(step_path, shape)
     assert stl.watertight
     assert stl.components == 1
     assert stl.volume > 0
+
+
+def test_v5_open_bottom_stl_and_step_round_trip_as_valid_single_solid(tmp_path):
+    design = ContourDesign.default()
+    _export_v5_design(design, tmp_path, "v5_open_bottom")
+
+
+def test_v5_closed_base_stl_and_step_round_trip_as_valid_single_solid(tmp_path):
+    design = ContourDesign.default()
+    design.base_thickness = 2.0
+    _export_v5_design(design, tmp_path, "v5_closed_base")

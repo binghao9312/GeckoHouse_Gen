@@ -188,7 +188,27 @@ function App() {
   </main>;
 }
 
-function Inspector({ design, selected, update, commit }: { design: Design; selected: number; update: (fn: (copy: Design) => void) => void; commit: (before: Design) => void }) { const level = design.levels[selected]; const number = (label: string, value: number, apply: (copy: Design, value: number) => void) => <label>{label}<input type="number" value={Number(value.toFixed(2))} onFocus={() => commit(clone(design))} onChange={(event) => applyChange(event,apply)}/></label>; const applyChange=(event: React.ChangeEvent<HTMLInputElement>, apply:(copy:Design,value:number)=>void)=>update((copy)=>apply(copy,Number(event.target.value))); return <aside className="inspector"><strong>PROPERTIES</strong><fieldset><legend>Shape</legend>{number('Height',design.height,(copy,value)=>{const ratio=value/copy.height; copy.height=value; copy.levels.forEach((item)=>item.z*=ratio);})}{number('Wall',design.wall_thickness,(copy,value)=>copy.wall_thickness=value)}{number('Roof',design.roof_thickness,(copy,value)=>copy.roof_thickness=value)}</fieldset><fieldset><legend>Contour level</legend>{number('Z',level.z,(copy,value)=>moveLevelZ(copy,selected,value))}<label>Role<select value={level.role} onFocus={()=>commit(clone(design))} onChange={(event)=>update((copy)=>{copy.levels[selected].role=event.target.value as typeof level.role;})}><option value="wall">wall</option><option value="roof_shoulder">roof shoulder</option><option value="roof_top">roof top</option></select></label><label>Advanced transition<select value={level.surface_mode} onChange={(event)=>update((copy)=>{copy.levels[selected].surface_mode=event.target.value as typeof level.surface_mode;})}><option value="smooth">smooth</option><option value="ledge">ledge</option></select></label></fieldset><fieldset><legend>Roof</legend>{number('Max overhang',design.max_overhang_xy,(copy,value)=>copy.max_overhang_xy=value)}{number('Overhang ratio',design.max_overhang_ratio,(copy,value)=>copy.max_overhang_ratio=value)}</fieldset><fieldset><legend>Surface</legend><label><input type="checkbox" checked={design.appearance.relief_enabled} onChange={(event)=>update((copy)=>{copy.appearance.relief_enabled=event.target.checked;})}/> Enable shallow relief</label>{number('Depth',design.appearance.relief_depth,(copy,value)=>copy.appearance.relief_depth=value)}{number('Gap',design.appearance.relief_gap,(copy,value)=>copy.appearance.relief_gap=value)}</fieldset></aside>; }
+function Inspector({ design, selected, update, commit }: { design: Design; selected: number; update: (fn: (copy: Design) => void) => void; commit: (before: Design) => void }) {
+  const level = design.levels[selected];
+  const applyChange = (event: React.ChangeEvent<HTMLInputElement>, apply: (copy: Design, value: number) => void) => update((copy) => apply(copy, Number(event.target.value)));
+  const number = (label: string, value: number, apply: (copy: Design, value: number) => void) => <label>{label}<input type="number" value={Number(value.toFixed(2))} onFocus={() => commit(clone(design))} onChange={(event) => applyChange(event, apply)}/></label>;
+  return <aside className="inspector">
+    <strong>PROPERTIES</strong>
+    <fieldset><legend>Shape</legend>
+      {number('Height', design.height, (copy, value) => { const ratio = value / copy.height; copy.height = value; copy.levels.forEach((item) => { item.z *= ratio; }); })}
+      {number('Wall', design.wall_thickness, (copy, value) => { copy.wall_thickness = value; })}
+      {number('Roof', design.roof_thickness, (copy, value) => { copy.roof_thickness = value; })}
+      {number('Base plate', design.base_thickness, (copy, value) => { copy.base_thickness = value; })}
+    </fieldset>
+    <fieldset><legend>Contour level</legend>
+      {number('Z', level.z, (copy, value) => moveLevelZ(copy, selected, value))}
+      <label>Role<select value={level.role} onFocus={() => commit(clone(design))} onChange={(event) => update((copy) => { copy.levels[selected].role = event.target.value as typeof level.role; })}><option value="wall">wall</option><option value="roof_shoulder">roof shoulder</option><option value="roof_top">roof top</option></select></label>
+      <label>Advanced transition<select value={level.surface_mode} onChange={(event) => update((copy) => { copy.levels[selected].surface_mode = event.target.value as typeof level.surface_mode; })}><option value="smooth">smooth</option><option value="ledge">ledge</option></select></label>
+    </fieldset>
+    <fieldset><legend>Roof</legend>{number('Max overhang', design.max_overhang_xy, (copy, value) => { copy.max_overhang_xy = value; })}{number('Overhang ratio', design.max_overhang_ratio, (copy, value) => { copy.max_overhang_ratio = value; })}</fieldset>
+    <fieldset><legend>Surface</legend><label><input type="checkbox" checked={design.appearance.relief_enabled} onChange={(event) => update((copy) => { copy.appearance.relief_enabled = event.target.checked; })}/> Enable shallow relief</label>{number('Depth', design.appearance.relief_depth, (copy, value) => { copy.appearance.relief_depth = value; })}{number('Gap', design.appearance.relief_gap, (copy, value) => { copy.appearance.relief_gap = value; })}</fieldset>
+  </aside>;
+}
 
 window.addEventListener('keydown',(event)=>{ if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase()==='z') event.preventDefault(); });
 

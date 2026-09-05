@@ -61,6 +61,7 @@ def test_v2_design_migrates_to_v5_and_preserves_edited_points():
     payload.pop("max_overhang_xy")
     payload.pop("max_overhang_ratio")
     payload.pop("min_level_spacing")
+    payload.pop("base_thickness")
     payload["entrance"].pop("profile")
     for level in payload["levels"]:
         level.pop("role")
@@ -70,3 +71,12 @@ def test_v2_design_migrates_to_v5_and_preserves_edited_points():
     assert migrated.as_dict()["version"] == CONTOUR_VERSION
     assert migrated.levels[3].points == design.levels[3].points
     assert migrated.levels[5].role == "roof_shoulder"
+
+
+def test_base_thickness_round_trips_and_rejects_a_filled_cavity():
+    design = ContourDesign.default()
+    design.base_thickness = 2.0
+    assert ContourDesign.from_mapping(design.as_dict()).base_thickness == pytest.approx(2.0)
+    design.base_thickness = design.height - design.roof_thickness
+    with pytest.raises(ValueError, match="base thickness"):
+        design.validate()

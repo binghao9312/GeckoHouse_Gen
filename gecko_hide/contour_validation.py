@@ -44,7 +44,7 @@ def _maximum_overhang(lower: Polygon, upper: Polygon) -> float:
 def validate_contour_design(design: "ContourDesign") -> None:
     """Validate safe adjacent transitions, allowing only controlled roof-shoulder overhang."""
     finite = (
-        design.height, design.wall_thickness, design.roof_thickness, design.ring_clearance,
+        design.height, design.wall_thickness, design.roof_thickness, design.base_thickness, design.ring_clearance,
         design.max_local_slope_deg, design.entrance_width, design.entrance_height, design.entrance_offset,
         design.max_overhang_xy, design.max_overhang_ratio, design.min_level_spacing, *design.summit,
     )
@@ -56,6 +56,8 @@ def validate_contour_design(design: "ContourDesign") -> None:
         raise ValueError("wall thickness must be at least 3.5 mm")
     if not 0 < design.roof_thickness < design.height:
         raise ValueError("roof thickness must be positive and less than height")
+    if not 0 <= design.base_thickness < design.height - design.roof_thickness:
+        raise ValueError("base thickness must be zero or leave an interior cavity below the roof")
     if not 1.0 <= design.ring_clearance <= 3.0:
         raise ValueError("ring clearance must be between 1 and 3 mm")
     if not 0 < design.max_local_slope_deg < 90:
