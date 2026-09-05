@@ -22,11 +22,23 @@ OUTPUT = ROOT / "output"
 FRONTEND_DIST = ROOT / "frontend" / "dist"
 
 
+DESIGN_INVALID = "DESIGN_INVALID"
+EXPORT_BUILD_FAILED = "EXPORT_BUILD_FAILED"
+EXPORT_ARTIFACT_INVALID = "EXPORT_ARTIFACT_INVALID"
+EXPORT_RENDER_FAILED = "EXPORT_RENDER_FAILED"
+EXPORT_TEXTURE_FAILED = "EXPORT_TEXTURE_FAILED"
+
+
+def _api_error(status_code: int, code: str, message: str) -> HTTPException:
+    """Return a stable error contract for the local designer UI."""
+    return HTTPException(status_code=status_code, detail={"code": code, "message": message})
+
+
 def _decode(payload: Mapping[str, Any]) -> ContourDesign:
     try:
         return ContourDesign.from_mapping(payload)
     except (TypeError, ValueError) as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+        raise _api_error(422, DESIGN_INVALID, str(error)) from error
 
 
 def _current_design() -> ContourDesign:
@@ -103,18 +115,26 @@ def create_app() -> FastAPI:
         save_design(design, CURRENT_DESIGN)
         try:
             from build import _config_for_design
-            from render_preview import render_v5_contour_views
 
             shape = generate_contour_gecko_hide(design, resolution="final")
             stl_path, step_path = export_model(shape, _config_for_design(design), OUTPUT, stem="gecko_hide_v5")
-            views = render_v5_contour_views(stl_path, OUTPUT)
-            result: dict[str, Any] = {"stl": stl_path.name, "step": step_path.name, "views": [path.name for path in views]}
-            if design.appearance.relief_enabled:
-                textured = export_textured_stl(stl_path, OUTPUT / "gecko_hide_v5_textured.stl", design)
-                result["textured_stl"] = textured.name
-                result["structural_step"] = step_path.name
         except (RuntimeError, ValueError) as error:
-            raise HTTPException(status_code=422, detail=str(error)) from error
+            code = EXPORT_ARTIFACT_INVALID if "round-trip validation" in str(error) else EXPORT_BUILD_FAILED
+            raise _api_error(422, code, str(error)) from error
+        try:
+            from render_preview import render_v5_contour_views
+
+            views = render_v5_contour_views(stl_path, OUTPUT)
+        except (RuntimeError, ValueError) as error:
+            raise _api_error(422, EXPORT_RENDER_FAILED, str(error)) from error
+        result: dict[str, Any] = {"stl": stl_path.name, "step": step_path.name, "views": [path.name for path in views]}
+        if design.appearance.relief_enabled:
+            try:
+                textured = export_textured_stl(stl_path, OUTPUT / "gecko_hide_v5_textured.stl", design)
+            except (RuntimeError, ValueError) as error:
+                raise _api_error(422, EXPORT_TEXTURE_FAILED, str(error)) from error
+            result["textured_stl"] = textured.name
+            result["structural_step"] = step_path.name
         return result
 
     if FRONTEND_DIST.is_dir():
