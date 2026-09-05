@@ -1,0 +1,10 @@
+{
+  "width": 140.0,
+  "depth": 95.0,
+  "height": 60.0,
+  "wall_thickness": 4.0,
+  "roof_thickness": 5.0,
+  "entrance_width": 45.0,
+  "entrance_height": 32.0,
+  "entrance_offset_x": -20.0
+}
