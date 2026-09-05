@@ -1,4 +1,4 @@
-"""CLI entry point for V4 topographic contour generation and export."""
+"""CLI entry point for V5 rock-shelter contour generation and export."""
 
 from __future__ import annotations
 
@@ -20,15 +20,15 @@ from gecko_hide.export import export_model
 from gecko_hide.generator import contour_from_config, generate_contour_gecko_hide, generate_profile_gecko_hide
 from gecko_hide.profile import ProfileDesign, load_profile, scale_profile
 from gecko_hide.validation import validate_stl
-from render_preview import render_contour_views, render_profile_views
+from render_preview import render_profile_views, render_v5_contour_views
 
 ROOT = Path(__file__).resolve().parent
 CURRENT_DESIGN = ROOT / "designs" / "current.json"
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate a printable topographic-contour gecko hide.")
-    parser.add_argument("--design", type=Path, help="versioned V4 contour design JSON")
+    parser = argparse.ArgumentParser(description="Generate a printable V5 rock-shelter gecko hide.")
+    parser.add_argument("--design", type=Path, help="versioned V5 contour design JSON (V2 migrates on load)")
     parser.add_argument("--legacy-profile", type=Path, help="deprecated versioned V3 profile JSON")
     parser.add_argument("--scale", type=float, default=1.0, help="uniform authored-design scale")
     parser.add_argument("--preset", choices=("small", "medium", "large"))
@@ -131,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         args = _parser().parse_args(argv)
         if args.design and args.legacy_profile:
             raise ValueError("choose either --design or --legacy-profile")
-        print("Gecko Hide Generator V4\n")
+        print("Gecko Hide Generator V5\n")
         if args.legacy_profile:
             print("Deprecated V3 profile mode.\n")
             _run_legacy_profile(args)
@@ -153,8 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         config = _config_for_design(design)
         print(f"Dimensions: {config.width:g} x {config.depth:g} x {config.height:g} mm\n")
         shape = generate_contour_gecko_hide(design, progress=True)
-        stl_path, step_path = export_model(shape, config, ROOT / "output", stem="gecko_hide_contour")
-        views = render_contour_views(stl_path, ROOT / "output")
+        stl_path, step_path = export_model(shape, config, ROOT / "output", stem="gecko_hide_v5")
+        views = render_v5_contour_views(stl_path, ROOT / "output")
         _report(stl_path, step_path, config)
         for path in views:
             print(f"PASS  {path.relative_to(ROOT)}")

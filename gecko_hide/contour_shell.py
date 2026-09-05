@@ -93,14 +93,14 @@ def _vertical_prism(ring: np.ndarray, lower_z: float, upper_z: float) -> cq.Shap
 
 
 def _build_sectioned(rings: Sequence[np.ndarray], heights: Sequence[float], modes: Sequence[str], label: str) -> cq.Shape:
-    """Fuse smooth lofts and explicit vertical step prisms into one outer or inner body."""
+    """Fuse smooth lofts and optional advanced ledge prisms into one solid."""
     if len(rings) != len(heights) or len(rings) != len(modes):
         raise ValueError("section rings, heights, and modes must have matching lengths")
     result: cq.Shape | None = None
     for index in range(1, len(rings)):
         segment = (
             _vertical_prism(rings[index - 1], heights[index - 1], heights[index])
-            if modes[index] == "step"
+            if modes[index] == "ledge"
             else _loft((rings[index - 1], rings[index]), (heights[index - 1], heights[index]), f"{label} section {index}")
         )
         result = segment if result is None else result.fuse(segment).clean()

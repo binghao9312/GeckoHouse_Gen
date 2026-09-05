@@ -24,8 +24,8 @@ def test_higher_contour_must_remain_inside_lower_clearance():
         design.validate()
 
 
-def test_only_smooth_or_step_surface_modes_are_accepted():
+def test_only_smooth_or_ledge_surface_modes_are_accepted():
     design = ContourDesign.default()
     design.levels[2].surface_mode = "invalid"
-    with pytest.raises(ValueError, match="surface mode must be smooth or step"):
+    with pytest.raises(ValueError, match="surface mode must be smooth or ledge"):
         design.validate()

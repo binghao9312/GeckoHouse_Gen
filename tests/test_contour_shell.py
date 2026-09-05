@@ -18,9 +18,9 @@ def test_contour_shell_is_one_grounded_hollow_solid_with_roof():
     assert shell.intersect(roof_probe).Volume() > 0
 
 
-def test_step_transition_produces_a_single_printable_shell():
+def test_advanced_ledge_transition_produces_a_single_printable_shell():
     design = ContourDesign.default()
-    design.levels[3].surface_mode = "step"
+    design.levels[3].surface_mode = "ledge"
     shell = build_contour_shell(design, resolution="preview")
     assert shell.isValid()
     assert len(shell.Solids()) == 1

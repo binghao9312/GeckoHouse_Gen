@@ -1,70 +1,69 @@
-# Gecko Hide Generator — V4 Topographic Contours
+# Gecko Hide Generator — V5 Rock Shelter Designer
 
-V4 designs a hide as editable, closed XY contour rings. The default shape is an asymmetric low hill with a shifted summit, not a reconstruction from four orthographic boundary curves. It lofts the actual rings into a continuous outer solid, offsets those rings inward for the cavity, then cuts only the front entrance.
+V5 is a local CAD-style editor for one canonical `ContourDesign` stack. Top, Front, Side, and interactive 3D views edit the same closed XY contour control points; Front transforms X bounds, Side transforms Y bounds, and either orthographic view can move an intermediate level Z. There is no independent front/side profile model.
 
-The retained V3 profile editor is deprecated at `legacy/profile_editor_v3.py`. It is not the default workflow.
+The default is a full-sided, asymmetric rock shelter: five near-full wall levels, a controlled broad roof shoulder, and a broad roof top. It avoids V4's shrinking mountain and terrace-style default.
 
 ## Install
 
-Python 3.11+, CadQuery, NumPy, SciPy, Shapely, Bokeh, trimesh, Matplotlib, and pytest:
+Python 3.11+, Node 20+, CadQuery, NumPy, SciPy, Shapely, FastAPI, trimesh, Matplotlib, and pytest:
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+cd frontend
+npm install
+npm run build
+cd ..
 ```
 
-## V4 contour editor
+`frontend/dist` is served by the Python launcher after the production Vite build. During UI development, use `npm run dev`; Vite proxies `/api` to the editor API.
+
+## V5 four-view editor
 
 ```powershell
 python profile_editor.py
 ```
 
-The default editor is a top-down contour canvas:
+Open `http://127.0.0.1:8000`. The desktop workspace shows all four synchronized views at once:
 
-1. Drag the 12 closed-loop footprint control points in X/Y.
-2. Choose **Generate Contours** to produce seven nested levels that drift toward the Summit marker.
-3. Choose a contour level, then choose **Smooth** or **Step** for its transition from the prior level.
-4. Use the **Top View / Edit** and **3D Preview** tabs to switch views. `Preview 3D` renders the selected 3D tab.
-5. Use **Previous Step** to restore the last edit; it stores the latest 20 complete design states.
-6. Use **Generate STL + STEP** for final export.
+- **Top** — direct XY control-point editing, grid, entrance direction, selected-ring highlight.
+- **Front** — X/Z left, right, center, and Z handles plus the draggable 7-handle entrance arch.
+- **Side** — Y/Z front, back, center, and Z handles.
+- **3D** — Three.js orbit, pan, zoom, and Top/Front/Side/Iso controls generated directly from the contour rings; it never invokes CadQuery while dragging.
 
-The status line states the invalid constraint, a specific recovery action, and that preview/export are disabled. Shapely rejects self-intersection, collapsed loops, reversed orientation, insufficient nesting clearance, and excessive local slope before CadQuery runs.
+The shared level timeline selects one contour in all views. Base and roof-top Z are locked. Snap supports Off, 1 mm, 2 mm, and 5 mm. Undo/redo applies complete design snapshots to point, envelope, level, entrance, and property edits. The inspector exposes exact dimensions, roles, roof limits, and relief settings.
 
-`Save Design` writes `designs/current.json`; load/save preserves control-point order, each transition mode, and manual-level flags.
+The local API supplies `GET /api/design`, `POST /api/design/validate`, `POST /api/design/preview-mesh`, `POST /api/design/save`, `POST /api/design/load`, and `POST /api/design/export`. 2D interaction remains client-side and validation is debounced.
 
-## CLI
+## Canonical contour model
 
-Generate the default V4 design:
+`ContourDesign` JSON is version 3. Each `ContourLevel` has a `role` (`wall`, `roof_shoulder`, or `roof_top`), `smooth`/advanced `ledge` transition, and Z/shape locks. Version-2 files migrate explicitly: their `step` mode becomes `ledge`, entrance arch handles are created from retained width/height fields, and roles are derived without changing existing control points.
+
+Wall transitions remain nested except for a small clearance-sized organic swell. A `roof_shoulder` may extend outward only when its maximum local expansion is below both `max_overhang_xy` (default 8 mm) and `max_overhang_ratio` (default 8%), with the existing local-slope and solid checks retained. The continuous structural shell remains open at the bottom, retains its roof, and has the authored front entrance cut only.
+
+Appearance settings (`relief_enabled`, seed, depth, gap, scale) are persisted separately from macro geometry. The relief seed never changes contour geometry. When enabled in the editor, the fallback creates `gecko_hide_v5_textured.stl`: a deterministic, outward-only, shallow rounded cell relief over the structural shell. `gecko_hide_v5.step` remains the exact untextured structural BREP and is never claimed to contain texture.
+
+## CLI and exports
 
 ```powershell
 python build.py
-```
-
-This writes `designs/current.json` and:
-
-```text
-output/gecko_hide_contour.stl
-output/gecko_hide_contour.step
-output/gecko_hide_contour_iso.png
-output/gecko_hide_contour_top.png
-output/gecko_hide_contour_front.png
-output/gecko_hide_contour_side.png
-```
-
-Generate an authored V4 design:
-
-```powershell
 python build.py --design designs/current.json
 ```
 
-Dimension arguments create a fresh V4 default footprint when no `--design` is supplied. Authored contours take precedence over dimension flags. V3 remains available only as `python build.py --legacy-profile profiles/current.json`.
+The default CLI creates a new V5 design and writes:
 
-## Contour and shell model
+```text
+output/gecko_hide_v5.stl
+output/gecko_hide_v5.step
+output/gecko_hide_v5_iso.png
+output/gecko_hide_v5_top.png
+output/gecko_hide_v5_front.png
+output/gecko_hide_v5_side.png
+```
 
-`ContourDesign` stores editable control loops at fixed Z heights in version-2 JSON. Each loop has 8–20 points and a transition mode: `smooth` lofts from the preceding ring; `step` holds the preceding footprint vertically, producing a horizontal exterior ledge at that level. Rings are arc-length resampled to 48 preview or 96 final samples, given a consistent winding direction, and cyclically aligned to minimize adjacent point travel.
-
-The inner cavity derives from Shapely inward offsets of those outer rings; it remains smooth across external steps so an interior shelf cannot disconnect the printable open volume. It begins at Z=-0.5 mm, leaves an open bottom, and ends at `height - roof_thickness`, leaving a continuous roof. The only structural openings are this bottom and the post-process front entrance cut.
+Authored designs take precedence over dimension flags. `--legacy-profile` keeps the retained V3 mode separate from the V5 workflow.
 
 ## Tests
 
@@ -72,4 +71,4 @@ The inner cavity derives from Shapely inward offsets of those outer rings; it re
 pytest
 ```
 
-The suite covers periodic closure and tangent continuity, contour validity and containment, cyclic ring alignment, shell cavity/roof behavior, deterministic serialization, exports, and retained legacy helpers.
+The suite covers periodic closure, transition validation, controlled roof overhang, Front/Side affine edits of canonical control points, center translation, Z spacing, V2 migration, deterministic save/load, one-solid CadQuery shell construction, and export geometry checks.

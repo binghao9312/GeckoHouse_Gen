@@ -1,19 +1,9 @@
-"""Compatibility launcher for the V4 topographic contour editor.
+"""Launch the V5 local multi-view Gecko Hide Designer."""
 
-Run ``python profile_editor.py``; legacy V3 profiles remain at
-``legacy/profile_editor_v3.py`` and are not the primary workflow.
-"""
+from __future__ import annotations
 
-from contour_editor import build_document
+import uvicorn
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    import subprocess
-    import sys
-
-    subprocess.run([sys.executable, "-m", "bokeh", "serve", "--show", str(Path(__file__).with_name("contour_editor.py"))], check=False)
-else:
-    from bokeh.io import curdoc
-
-    build_document(curdoc())
+    uvicorn.run("gecko_hide.api:app", host="127.0.0.1", port=8000, reload=False)

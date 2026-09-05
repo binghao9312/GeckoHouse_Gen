@@ -74,6 +74,15 @@ def render_contour_views(stl_path: Path, output_dir: Path) -> tuple[Path, Path, 
         _render_view(stl_path, output_dir / "gecko_hide_contour_side.png", elev=0, azim=0),
     )
 
+def render_v5_contour_views(stl_path: Path, output_dir: Path) -> tuple[Path, Path, Path, Path]:
+    """Render the required V5 rock-shelter export inspection views."""
+    return (
+        _render_view(stl_path, output_dir / "gecko_hide_v5_iso.png", elev=26, azim=-54),
+        _render_view(stl_path, output_dir / "gecko_hide_v5_top.png", elev=90, azim=-90),
+        _render_view(stl_path, output_dir / "gecko_hide_v5_front.png", elev=0, azim=-90),
+        _render_view(stl_path, output_dir / "gecko_hide_v5_side.png", elev=0, azim=0),
+    )
+
 
 def main() -> int:
     args = _parser().parse_args()
