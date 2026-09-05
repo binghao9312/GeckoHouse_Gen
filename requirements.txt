@@ -4,4 +4,5 @@ trimesh>=4.4
 matplotlib>=3.8
 bokeh>=3.5
 scipy>=1.13
+shapely>=2.0
 pytest>=8.0

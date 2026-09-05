@@ -65,6 +65,16 @@ def render_profile_views(stl_path: Path, output_dir: Path) -> tuple[Path, Path, 
     )
 
 
+def render_contour_views(stl_path: Path, output_dir: Path) -> tuple[Path, Path, Path, Path]:
+    """Render the documented V4 contour isometric, top, front, and side views."""
+    return (
+        _render_view(stl_path, output_dir / "gecko_hide_contour_iso.png", elev=26, azim=-54),
+        _render_view(stl_path, output_dir / "gecko_hide_contour_top.png", elev=90, azim=-90),
+        _render_view(stl_path, output_dir / "gecko_hide_contour_front.png", elev=0, azim=-90),
+        _render_view(stl_path, output_dir / "gecko_hide_contour_side.png", elev=0, azim=0),
+    )
+
+
 def main() -> int:
     args = _parser().parse_args()
     print(render_preview(args.stl, args.output))

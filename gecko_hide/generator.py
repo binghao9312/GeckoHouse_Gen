@@ -1,4 +1,4 @@
-"""Top-level V3 profile-driven and optional V2 legacy assemblies."""
+"""Top-level V4 topographic and explicit legacy V2/V3 assemblies."""
 
 from __future__ import annotations
 
@@ -7,7 +7,14 @@ from dataclasses import replace
 import cadquery as cq
 
 from .config import GeckoHideConfig
-from .entrance import create_entrance_cutout, create_profile_entrance_cutout, entrance_keepout
+from .contour import ContourDesign
+from .contour_shell import build_contour_shell
+from .entrance import (
+    create_contour_entrance_cutout,
+    create_entrance_cutout,
+    create_profile_entrance_cutout,
+    entrance_keepout,
+)
 from .profile import ProfileDesign
 from .profile_shell import build_profile_shell
 from .random_utils import make_rng
@@ -32,6 +39,31 @@ def profile_from_config(config: GeckoHideConfig) -> ProfileDesign:
         entrance_height=config.entrance_height,
         entrance_offset_x=config.entrance_offset_x,
     )
+
+
+def contour_from_config(config: GeckoHideConfig) -> ContourDesign:
+    """Translate dimension-only CLI input into the default editable V4 topology."""
+    return replace(
+        ContourDesign.default(width=config.width, depth=config.depth, height=config.height),
+        wall_thickness=config.wall_thickness,
+        roof_thickness=config.roof_thickness,
+        entrance_width=config.entrance_width,
+        entrance_height=config.entrance_height,
+        entrance_offset=config.entrance_offset_x,
+    )
+
+
+def generate_contour_gecko_hide(design: ContourDesign, *, resolution: str = "final", progress: bool = False) -> cq.Shape:
+    """Create the V4 continuous contour shell and its front entrance."""
+    _emit(1, "Validating editable contours", progress)
+    design.validate()
+    _emit(2, "Lofting continuous topographic shell", progress)
+    body = build_contour_shell(design, resolution)
+    _emit(3, "Cutting contour entrance", progress)
+    body = safe_cut(body, create_contour_entrance_cutout(design))
+    _emit(4, "Validating continuous model", progress)
+    validate_shape(body)
+    return body
 
 
 def generate_profile_gecko_hide(profile: ProfileDesign, *, resolution: str = "final", progress: bool = False) -> cq.Shape:
@@ -73,8 +105,8 @@ def _generate_legacy_stone_hide(config: GeckoHideConfig, *, progress: bool) -> c
 
 
 def generate_gecko_hide(config: GeckoHideConfig, *, progress: bool = False) -> cq.Shape:
-    """Generate V3 by default; V2 stones require ``texture_mode='legacy_stones'``."""
+    """Generate V4 by default; V2 stones remain an explicit comparison mode."""
     config.validate()
     if config.texture_mode == "legacy_stones":
         return _generate_legacy_stone_hide(config, progress=progress)
-    return generate_profile_gecko_hide(profile_from_config(config), progress=progress)
+    return generate_contour_gecko_hide(contour_from_config(config), progress=progress)

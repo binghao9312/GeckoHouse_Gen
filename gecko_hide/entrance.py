@@ -78,3 +78,29 @@ def create_profile_entrance_cutout(profile: ProfileDesign) -> cq.Shape:
         .extrude(-(front_end - front_start))
         .val()
     )
+
+def create_contour_entrance_cutout(design: "ContourDesign") -> cq.Shape:
+    """Make a deterministic arch cutter through the V4 front (-Y) contour wall."""
+    from .contour_shell import sample_contour
+
+    design.validate()
+    width = design.entrance_width
+    height = design.entrance_height
+    shoulder = height * 0.48
+    points: list[tuple[float, float]] = [(-width / 2.0, 0.0), (-width / 2.0, shoulder)]
+    for index in range(1, 8):
+        angle = math.pi - math.pi * index / 8
+        points.append((
+            math.cos(angle) * width / 2.0,
+            shoulder + math.sin(angle) * (height - shoulder),
+        ))
+    points.extend([(width / 2.0, shoulder), (width / 2.0, 0.0)])
+    base = sample_contour(design.footprint.points, count=192)
+    front_start = float(base[:, 1].min()) - 3.0
+    return (
+        cq.Workplane("XZ", origin=(design.entrance_offset, front_start, 0.0))
+        .polyline(points)
+        .close()
+        .extrude(-(design.wall_thickness + 20.0))
+        .val()
+    )
