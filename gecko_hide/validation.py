@@ -56,3 +56,21 @@ def validate_stl(path: str | Path, config: GeckoHideConfig) -> MeshValidation:
         bounds=(tuple(map(float, lower)), tuple(map(float, upper))),
         triangle_count=len(mesh.faces),
     )
+
+
+def validate_step(path: str | Path, source_shape: object) -> None:
+    """Round-trip a STEP file through OpenCascade before it is offered to users."""
+    import cadquery as cq
+
+    source_volume = float(source_shape.Volume())
+    try:
+        imported = cq.importers.importStep(str(path)).val()
+    except Exception as error:
+        raise ValueError(f"STEP cannot be imported after export: {error}") from error
+    validate_shape(imported)
+    if not np.isfinite(imported.Volume()):
+        raise ValueError("STEP has a non-finite volume")
+    if not np.isclose(imported.Volume(), source_volume, rtol=1e-4, atol=0.1):
+        raise ValueError(
+            f"STEP round-trip volume differs from source: {imported.Volume():.3f} vs {source_volume:.3f}"
+        )

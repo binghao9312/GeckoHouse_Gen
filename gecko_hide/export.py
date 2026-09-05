@@ -7,6 +7,7 @@ from pathlib import Path
 import cadquery as cq
 
 from .config import GeckoHideConfig
+from .validation import validate_step, validate_stl
 
 
 def export_model(
@@ -28,4 +29,9 @@ def export_model(
         raise RuntimeError("STL export did not create a non-empty file")
     if not step_path.is_file() or step_path.stat().st_size == 0:
         raise RuntimeError("STEP export did not create a non-empty file")
+    try:
+        validate_stl(stl_path, config)
+        validate_step(step_path, shape)
+    except ValueError as error:
+        raise RuntimeError(f"export round-trip validation failed: {error}") from error
     return stl_path, step_path
