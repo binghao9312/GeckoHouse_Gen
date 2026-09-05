@@ -1,4 +1,6 @@
 import random
+import cadquery as cq
+
 
 import pytest
 
@@ -18,7 +20,21 @@ def test_stone_is_single_solid_with_volume_and_reasonable_dimensions():
     assert stone.Volume() > 0
     assert 20 < box.xlen < 45
     assert 12 < box.ylen < 32
-    assert box.zlen == pytest.approx(4.0, abs=0.1)
+    assert 4.0 <= box.zlen <= 4.4
+    middle = stone.intersect(
+        cq.Workplane("XY")
+        .box(100, 100, 0.08, centered=(True, True, False))
+        .translate((0, 0, 4.0 * 0.55))
+        .val()
+    )
+    exposed_tip = stone.intersect(
+        cq.Workplane("XY")
+        .box(100, 100, 0.08, centered=(True, True, False))
+        .translate((0, 0, 4.0 * 0.97))
+        .val()
+    )
+    middle_box, tip_box = middle.BoundingBox(), exposed_tip.BoundingBox()
+    assert middle_box.xlen * middle_box.ylen > tip_box.xlen * tip_box.ylen
 
 
 def test_stones_are_seed_deterministic_but_rng_state_changes_geometry():

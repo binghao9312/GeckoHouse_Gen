@@ -11,8 +11,10 @@ dependencies = [
     "cadquery>=2.5,<2.7",
     "numpy>=1.26",
     "trimesh>=4.4",
+    "matplotlib>=3.8",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-ra"

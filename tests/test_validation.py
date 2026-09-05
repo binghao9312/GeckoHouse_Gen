@@ -1,5 +1,7 @@
 import numpy as np
 import trimesh
+import pytest
+
 
 from gecko_hide.config import GeckoHideConfig
 from gecko_hide.export import export_model
@@ -20,3 +22,11 @@ def test_exported_stl_is_watertight_connected_and_finite(tmp_path):
     assert result.volume > 0
     assert mesh.is_watertight is True
     assert np.isfinite(mesh.vertices).all()
+
+def test_organic_geometry_ranges_are_validated():
+    with pytest.raises(ValueError, match="shell top shrink"):
+        GeckoHideConfig(shell_top_shrink_min=0.94, shell_top_shrink_max=0.90).validate()
+    with pytest.raises(ValueError, match="stone middle bulge"):
+        GeckoHideConfig(stone_mid_bulge_min=0.99).validate()
+    with pytest.raises(ValueError, match="wall_vertical_jitter_ratio"):
+        GeckoHideConfig(wall_vertical_jitter_ratio=0.31).validate()

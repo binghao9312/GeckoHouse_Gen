@@ -25,8 +25,8 @@ def create_entrance_cutout(config: GeckoHideConfig, rng: random.Random) -> cq.Sh
     """Make an asymmetric arched prism that completely crosses the front wall."""
     width = config.entrance_width
     height = config.entrance_height
-    left = -width / 2 * rng.uniform(0.94, 1.02)
-    right = width / 2 * rng.uniform(0.94, 1.02)
+    left = -width / 2 * rng.uniform(0.97, 1.02)
+    right = width / 2 * rng.uniform(0.97, 1.02)
     shoulder = height * rng.uniform(0.43, 0.53)
     points: list[tuple[float, float]] = [(left, 0.0), (left, shoulder)]
     # Ordered ellipse samples preserve a simple, non-self-intersecting profile.
@@ -35,15 +35,17 @@ def create_entrance_cutout(config: GeckoHideConfig, rng: random.Random) -> cq.Sh
         x = math.cos(angle) * (right - left) / 2
         z = shoulder + math.sin(angle) * (height - shoulder)
         if index not in (0, 6):
-            z *= rng.uniform(0.95, 1.04)
-            x *= rng.uniform(0.97, 1.03)
+            z *= rng.uniform(0.97, 1.03)
+            x *= rng.uniform(0.98, 1.02)
         points.append((x, z))
     points.extend([(right, 0.0), (left, 0.0)])
-    # XZ's normal is -Y. A negative extrusion begins outside the front and moves inward.
+    # Start beyond the lower-wall bulge and traverse the full local wall
+    # thickness rather than assuming the former flat front plane.
+    front_start = -config.depth / 2 * (1 + config.shell_profile_jitter) - 3.0
     return (
-        cq.Workplane("XZ", origin=(config.entrance_offset_x, -config.depth / 2 - 2.0, 0.0))
+        cq.Workplane("XZ", origin=(config.entrance_offset_x, front_start, 0.0))
         .polyline(points)
         .close()
-        .extrude(-(config.wall_thickness + 4.0))
+        .extrude(-(config.wall_thickness + 8.0))
         .val()
     )

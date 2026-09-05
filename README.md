@@ -42,11 +42,17 @@ python build.py --width 180 --depth 120 --height 75 --wall 4 --entrance-width 55
 python build.py --preset medium --width 200 --seed 999
 ```
 
-輸出位於 `output/gecko_hide_seed_<seed>.stl` 與 `output/gecko_hide_seed_<seed>.step`。STEP 保留 CadQuery solid，STL 使用適合 FDM 的 0.15 mm linear deflection。
+輸出位於 `output/gecko_hide_seed_<seed>.stl` 與 `output/gecko_hide_seed_<seed>.step`。STEP 保留 CadQuery solid，STL 使用適合 FDM 的 0.15 mm linear deflection。生成等角預覽：
+
+```bash
+python render_preview.py output/gecko_hide_seed_12345.stl
+```
+
+預覽會輸出同目錄的 `gecko_hide_seed_<seed>_preview.png`。
 
 ## Parameters
 
-`GeckoHideConfig` 提供 `width`、`depth`、`height`、`wall_thickness`、`roof_thickness`、`bottom_open`、入口寬/高/X offset、stone 寬/高/depth/gap 範圍、polygon vertex count、irregularity、fillet 範圍、roof rock count 與 `seed`。所有尺寸為 mm；不合理值（例如 wall < 3 mm、入口不在前牆內）會 raise `ValueError`，不會靜默修正。
+`GeckoHideConfig` 提供 `width`、`depth`、`height`、`wall_thickness`、`roof_thickness`、`bottom_open`、入口寬/高/X offset、stone 寬/高/depth/gap 範圍、polygon vertex count、irregularity、fillet 範圍、shell profile asymmetry、stone taper/bulge/section jitter、wall vertical jitter、roof rock count 與 `seed`。所有尺寸為 mm；不合理值（例如 wall < 3 mm、入口不在前牆內）會 raise `ValueError`，不會靜默修正。
 
 ## Validation and tests
 

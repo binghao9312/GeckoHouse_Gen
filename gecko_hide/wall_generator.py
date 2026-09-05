@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import random
+import warnings
 
 import cadquery as cq
 
 from .config import GeckoHideConfig
 from .stone import create_stone
+
 
 
 def _intersects_keepout(
@@ -50,29 +52,63 @@ def generate_wall_stones(
     z = max(1.0, config.stone_height_max * config.stone_irregularity + 0.5)
     row = 0
     while z < z_limit - config.stone_height_min * 0.35:
-        row_height = min(rng.uniform(config.stone_height_min, config.stone_height_max), z_limit - z)
+        row_height = min(
+            rng.triangular(
+                config.stone_height_min,
+                config.stone_height_max,
+                config.stone_height_min + 0.60 * (config.stone_height_max - config.stone_height_min),
+            ),
+            z_limit - z,
+        )
         x = -span / 2 + rng.uniform(-4.0, 4.0) + (row % 2) * rng.uniform(3.0, 9.0)
         while x < span / 2 - config.stone_width_min * 0.25:
-            width = min(rng.uniform(config.stone_width_min, config.stone_width_max), span / 2 - x)
+            available_width = span / 2 - x
+            width = min(
+                rng.triangular(
+                    config.stone_width_min,
+                    config.stone_width_max,
+                    config.stone_width_min + 0.60 * (config.stone_width_max - config.stone_width_min),
+                ),
+                available_width,
+            )
             if width < config.stone_width_min * 0.40:
                 break
-            height = min(row_height * rng.uniform(0.82, 1.08), z_limit - z)
             gap = rng.uniform(config.stone_gap_min, config.stone_gap_max)
             x0, x1 = x + gap / 2, x + width - gap / 2
-            if x1 > x0 and not (side == "front" and _intersects_keepout(x0, x1, z, z + height, entrance_keepout)):
+            local_z = max(
+                0.0,
+                z + rng.uniform(-config.wall_vertical_jitter_ratio, config.wall_vertical_jitter_ratio) * row_height,
+            )
+            height = min(
+                row_height * rng.triangular(0.72, 1.15, 0.96),
+                z_limit - local_z,
+            )
+            if (
+                height >= config.stone_height_min * 0.35
+                and x1 > x0
+                and not (side == "front" and _intersects_keepout(x0, x1, local_z, local_z + height, entrance_keepout))
+            ):
                 rock_depth = rng.uniform(max(2.1, config.stone_depth_min), config.stone_depth_max)
                 embed = min(1.0, rock_depth - 1.2)
-                stone = create_stone(
-                    x1 - x0,
-                    height,
-                    rock_depth,
-                    rng,
-                    vertex_count=rng.randint(config.stone_vertex_count_min, config.stone_vertex_count_max),
-                    irregularity=config.stone_irregularity,
-                    fillet_radius=rng.uniform(config.stone_fillet_min, config.stone_fillet_max),
-                )
-                stone = stone.rotate((0, 0, 0), (0, 0, 1), rng.uniform(-8.0, 8.0))
-                stones.append(_oriented_stone(stone, side, (x0 + x1) / 2, z, embed, config, height))
+                try:
+                    stone = create_stone(
+                        x1 - x0,
+                        height,
+                        rock_depth,
+                        rng,
+                        vertex_count=rng.randint(config.stone_vertex_count_min, config.stone_vertex_count_max),
+                        irregularity=config.stone_irregularity,
+                        fillet_radius=rng.uniform(config.stone_fillet_min, config.stone_fillet_max),
+                        front_taper=(config.stone_front_taper_min, config.stone_front_taper_max),
+                        mid_bulge=(config.stone_mid_bulge_min, config.stone_mid_bulge_max),
+                        section_jitter=config.stone_section_jitter,
+                    )
+                except ValueError as error:
+                    warnings.warn(f"skipping wall rock after loft failure: {error}", RuntimeWarning)
+                else:
+                    rotation_limit = 5.0 + (config.stone_rotation_max_deg - 5.0) * min(1.0, local_z / z_limit)
+                    stone = stone.rotate((0, 0, 0), (0, 0, 1), rng.uniform(-rotation_limit, rotation_limit))
+                    stones.append(_oriented_stone(stone, side, (x0 + x1) / 2, local_z, embed, config, height))
             x += width + gap
         z += row_height + rng.uniform(config.stone_gap_min, config.stone_gap_max)
         row += 1

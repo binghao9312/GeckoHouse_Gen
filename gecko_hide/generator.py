@@ -25,7 +25,7 @@ def generate_gecko_hide(config: GeckoHideConfig, *, progress: bool = False) -> c
     rng = make_rng(config.seed)
 
     _emit(2, "Creating structural shell", progress)
-    body = create_shell(config)
+    body = create_shell(config, rng)
     _emit(3, "Creating entrance", progress)
     body = safe_cut(body, create_entrance_cutout(config, rng))
 
