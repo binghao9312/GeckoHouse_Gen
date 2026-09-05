@@ -49,6 +49,8 @@ class GeckoHideConfig:
     stone_rotation_max_deg: float = 12.0
     wall_vertical_jitter_ratio: float = 0.15
 
+    texture_mode: str = "none"
+
 
     def validate(self) -> None:
         positive = ("width", "depth", "height", "entrance_width", "entrance_height")
@@ -97,6 +99,8 @@ class GeckoHideConfig:
             raise ValueError("stone_rotation_max_deg must be between 0.0 and 20.0")
         if not 0.0 <= self.wall_vertical_jitter_ratio <= 0.30:
             raise ValueError("wall_vertical_jitter_ratio must be between 0.0 and 0.30")
+        if self.texture_mode not in {"none", "legacy_stones"}:
+            raise ValueError("texture_mode must be 'none' or 'legacy_stones'")
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

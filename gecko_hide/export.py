@@ -9,11 +9,17 @@ import cadquery as cq
 from .config import GeckoHideConfig
 
 
-def export_model(shape: cq.Shape, config: GeckoHideConfig, output_dir: str | Path) -> tuple[Path, Path]:
+def export_model(
+    shape: cq.Shape,
+    config: GeckoHideConfig,
+    output_dir: str | Path,
+    *,
+    stem: str | None = None,
+) -> tuple[Path, Path]:
     """Export FDM-resolution STL and editable STEP, raising on any failure."""
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
-    stem = f"gecko_hide_seed_{config.seed}"
+    stem = stem or f"gecko_hide_seed_{config.seed}"
     stl_path = destination / f"{stem}.stl"
     step_path = destination / f"{stem}.step"
     cq.exporters.export(shape, str(stl_path), tolerance=0.15, angularTolerance=0.1)

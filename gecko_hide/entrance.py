@@ -8,6 +8,9 @@ import random
 import cadquery as cq
 
 from .config import GeckoHideConfig
+from .profile import ProfileDesign
+from .profile_curve import make_profile_curves
+
 
 
 def entrance_keepout(config: GeckoHideConfig) -> tuple[float, float, float, float]:
@@ -47,5 +50,31 @@ def create_entrance_cutout(config: GeckoHideConfig, rng: random.Random) -> cq.Sh
         .polyline(points)
         .close()
         .extrude(-(config.wall_thickness + 8.0))
+        .val()
+    )
+
+def create_profile_entrance_cutout(profile: ProfileDesign) -> cq.Shape:
+    """Make a deterministic arch cutter through the profile's local front wall."""
+    profile.validate()
+    width = profile.entrance_width
+    height = profile.entrance_height
+    shoulder = height * 0.48
+    points: list[tuple[float, float]] = [(-width / 2.0, 0.0), (-width / 2.0, shoulder)]
+    for index in range(1, 8):
+        angle = math.pi - math.pi * index / 8
+        points.append((
+            math.cos(angle) * width / 2.0,
+            shoulder + math.sin(angle) * (height - shoulder),
+        ))
+    points.extend([(width / 2.0, shoulder), (width / 2.0, 0.0)])
+    curves = make_profile_curves(profile)
+    sample_z = [height * index / 32.0 for index in range(33)]
+    front_start = min(float(curves.y_front(z)) for z in sample_z) - 3.0
+    front_end = max(float(curves.y_front(z)) for z in sample_z) + profile.wall_thickness + 5.0
+    return (
+        cq.Workplane("XZ", origin=(profile.entrance_offset_x, front_start, 0.0))
+        .polyline(points)
+        .close()
+        .extrude(-(front_end - front_start))
         .val()
     )

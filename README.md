@@ -1,12 +1,10 @@
-# Gecko Hide Generator
+# Gecko Hide Generator — V3 Profile Driven
 
-以 CadQuery 建立可重現、可編輯且適合 FDM 列印的守宮岩石躲避屋。模型是底部開放的中空單一 solid：圓角結構殼體、非對稱洞穴入口、四面有石縫的 irregular polygon 岩石，以及低矮的屋頂岩石。
+V3 builds a deterministic, smooth, open-bottom structural shell from four user-edited PCHIP boundary curves. The base shell has no decorative seams or stone dependencies; `texture_mode="none"` is the default. The retained V2 stone implementation is available only through `--texture-mode legacy_stones`.
 
-## Requirements and installation
+## Install
 
-Python 3.11+、CadQuery、NumPy、trimesh 與 pytest。
-
-Windows:
+Python 3.11+, CadQuery, NumPy, SciPy, Bokeh, trimesh, Matplotlib, and pytest:
 
 ```powershell
 python -m venv .venv
@@ -14,59 +12,56 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Linux/macOS:
+## Profile editor
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+```powershell
+python profile_editor.py
 ```
 
-## Generate
+The wrapper opens Bokeh Server. Alternatively:
 
-預設尺寸直接生成：
-
-```bash
-python build.py
+```powershell
+bokeh serve --show profile_editor.py
 ```
 
-完整 acceptance command：
+Drag the front X-Z and side Y-Z control points horizontally. Z levels remain fixed so the profile ordering cannot invert. Smooth PCHIP curves and profile validation update immediately; invalid curves disable preview and final generation. The editor saves `profiles/current.json`, exports `output/front_profile.png` and `output/side_profile.png`, creates a lower-resolution `output/profile_preview.stl` / `profile_preview.png`, and creates final `gecko_hide_profile.stl`, `.step`, `profile_iso.png`, `profile_front.png`, and `profile_side.png`.
 
-```bash
-python build.py --width 180 --depth 120 --height 75 --wall 4 --entrance-width 55 --entrance-height 40 --entrance-offset-x -30 --seed 12345
+## CLI
+
+Generate the supplied default profile:
+
+```powershell
+python build.py --profile profiles/default.json
 ```
 
-`--seed random` 會列印系統產生的 seed；將該數字再次傳入即可重現相同 geometry。`--preset small|medium|large` 載入 `presets/` JSON，任何 CLI 尺寸或 seed 參數會覆蓋 preset，例如：
+Profile boundaries, thicknesses, and entrance fields always take precedence over old macro CLI arguments. `--width`, `--depth`, `--height`, `--wall`, `--roof`, and entrance arguments are reported and ignored when `--profile` is present; curves are never silently scaled. Use an explicit uniform scale when needed:
 
-```bash
-python build.py --preset medium --width 200 --seed 999
+```powershell
+python build.py --profile profiles/current.json --scale 1.1
 ```
 
-輸出位於 `output/gecko_hide_seed_<seed>.stl` 與 `output/gecko_hide_seed_<seed>.step`。STEP 保留 CadQuery solid，STL 使用適合 FDM 的 0.15 mm linear deflection。生成等角預覽：
+The dimension CLI remains available and translates its values into the V3 default editable profile:
 
-```bash
-python render_preview.py output/gecko_hide_seed_12345.stl
+```powershell
+python build.py --width 180 --depth 120 --height 75 --wall 4 --entrance-width 55 --entrance-height 40 --entrance-offset-x -30
 ```
 
-預覽會輸出同目錄的 `gecko_hide_seed_<seed>_preview.png`。
+`--seed` affects only `--texture-mode legacy_stones`; it cannot affect V3 macro geometry.
 
-## Parameters
+## Curve and shell model
 
-`GeckoHideConfig` 提供 `width`、`depth`、`height`、`wall_thickness`、`roof_thickness`、`bottom_open`、入口寬/高/X offset、stone 寬/高/depth/gap 範圍、polygon vertex count、irregularity、fillet 範圍、shell profile asymmetry、stone taper/bulge/section jitter、wall vertical jitter、roof rock count 與 `seed`。所有尺寸為 mm；不合理值（例如 wall < 3 mm、入口不在前牆內）會 raise `ValueError`，不會靜默修正。
+`ProfileDesign` stores `x_left(z)`, `x_right(z)`, `y_front(z)`, and `y_back(z)` at fixed Z control levels. SciPy `PchipInterpolator` produces local, continuous curves without global polynomial overshoot. At 18 preview or 32 final heights, the generator evaluates those curves and lofts consistently ordered 64-point superellipses into the outer body. An inward-offset profile loft is cut from Z=-0.5 through `height - roof_thickness`, leaving a continuous roof and coplanar Z=0 opening. The profile-aware entrance cutter runs after the shell loft.
 
-## Validation and tests
+Profile validation rejects curve crossing, insufficient interior clearance, entrances outside local side walls, wall thickness below 3.5 mm, invalid roof clearance, and boundary slopes above 55° from vertical. Final CLI generation validates the CadQuery solid and exported STL for one connected watertight component, finite vertices, positive volume, and Z=0 grounding.
 
-每次 `build.py` 都會重新以 trimesh 載入 STL，檢查 finite vertices、watertight、單一 connected component、非零體積、尺寸界限與 `min Z = 0`。可單獨驗證：
+## Tests
 
-```bash
-python validate.py output/gecko_hide_seed_12345.stl --seed 12345
+```powershell
 pytest
 ```
 
-## 3D printing notes
+The suite covers PCHIP determinism/local control, crossing rejection, profile shell cavity/roof/bottom behavior, asymmetry, JSON save/load/version errors, export validation, and retained legacy helpers.
 
-預設 structural wall 為 4 mm，石縫至少 1.2 mm，石頭嵌入殼體至少 0.8 mm；底部完全開放且落在 Z=0，可直接放到列印平台。先以自己的 slicer 檢查材料、縮放與入口方向。
+## Known limitation
 
-## Known limitations
-
-第一版刻意不提供 GUI、可拆屋頂、通風孔、磁鐵孔、高頻表面 noise 或真實岩石掃描。裝飾 stone 的 fillet/union 在 OCC 無法處理時會安全略過該顆 stone；結構殼、入口、STL 或 STEP 的失敗仍會使 build 失敗。
+V3 intentionally does not yet implement shallow rock-relief texture. `legacy_stones` is comparison-only and is not part of the V3 structural model.

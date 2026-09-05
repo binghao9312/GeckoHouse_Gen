@@ -20,30 +20,26 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def render_preview(stl_path: Path, output_path: Path | None = None) -> Path:
-    """Render a front/side/roof isometric image without opening a GUI."""
+def _render_view(stl_path: Path, output_path: Path, *, elev: float, azim: float) -> Path:
+    """Render one neutral-material mesh view to a non-empty PNG."""
     mesh = trimesh.load_mesh(stl_path, force="mesh", process=False)
     if not isinstance(mesh, trimesh.Trimesh) or len(mesh.faces) == 0:
         raise ValueError("STL has no triangle mesh to render")
-    output_path = output_path or stl_path.with_name(f"{stl_path.stem}_preview.png")
     points, face_indices = trimesh.sample.sample_surface(mesh, 300_000, seed=12_345)
     normals = mesh.face_normals[face_indices]
     light = np.array((-0.45, -0.35, 0.82))
     light /= np.linalg.norm(light)
     intensity = np.clip(0.25 + 0.75 * (normals @ light + 1.0) / 2.0, 0.16, 0.94)
     colors = np.column_stack((0.18 * intensity, 0.34 * intensity, 0.23 * intensity, np.ones_like(intensity)))
-
     figure = plt.figure(figsize=(10, 8), facecolor="#f5f1e8")
     axes = figure.add_subplot(111, projection="3d", facecolor="#f5f1e8")
-    # Area-weighted sampling retains both broad shell surfaces and fine rock
-    # curvature while avoiding a heavyweight interactive renderer.
     axes.scatter(points[:, 0], points[:, 1], points[:, 2], c=colors, marker="s", s=1.0, depthshade=False)
     lower, upper = mesh.bounds
     axes.set_xlim(lower[0], upper[0])
     axes.set_ylim(lower[1], upper[1])
     axes.set_zlim(lower[2], upper[2])
     axes.set_box_aspect(upper - lower)
-    axes.view_init(elev=26, azim=-54)
+    axes.view_init(elev=elev, azim=azim)
     axes.set_axis_off()
     figure.subplots_adjust(0, 0, 1, 1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -52,6 +48,21 @@ def render_preview(stl_path: Path, output_path: Path | None = None) -> Path:
     if not output_path.is_file() or output_path.stat().st_size == 0:
         raise RuntimeError("preview renderer did not create a non-empty PNG")
     return output_path
+
+
+def render_preview(stl_path: Path, output_path: Path | None = None) -> Path:
+    """Render the standard front-left isometric preview."""
+    output_path = output_path or stl_path.with_name(f"{stl_path.stem}_preview.png")
+    return _render_view(stl_path, output_path, elev=26, azim=-54)
+
+
+def render_profile_views(stl_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
+    """Render required V3 isometric, front, and side inspection views."""
+    return (
+        _render_view(stl_path, output_dir / "profile_iso.png", elev=26, azim=-54),
+        _render_view(stl_path, output_dir / "profile_front.png", elev=0, azim=-90),
+        _render_view(stl_path, output_dir / "profile_side.png", elev=0, azim=0),
+    )
 
 
 def main() -> int:

@@ -12,6 +12,8 @@ dependencies = [
     "numpy>=1.26",
     "trimesh>=4.4",
     "matplotlib>=3.8",
+    "bokeh>=3.5",
+    "scipy>=1.13",
 ]
 
 [tool.pytest.ini_options]
